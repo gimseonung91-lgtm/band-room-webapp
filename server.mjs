@@ -337,10 +337,11 @@ async function createCalendarEvent(body) {
 }
 
 async function listDriveScores() {
-  if (!config.driveFolderId) return [];
+  const folderId = normalizeDriveFolderId(config.driveFolderId);
+  if (!folderId) return [];
 
   const q = [
-    `'${config.driveFolderId.replaceAll("'", "\\'")}' in parents`,
+    `'${folderId.replaceAll("'", "\\'")}' in parents`,
     'trashed = false',
     '(',
     "mimeType = 'application/pdf'",
@@ -542,6 +543,19 @@ function previewUrl(file) {
     return `https://docs.google.com/presentation/d/${file.id}/preview`;
   }
   return `https://drive.google.com/file/d/${file.id}/preview`;
+}
+
+function normalizeDriveFolderId(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+
+  const folderUrlMatch = trimmed.match(/\/folders\/([^/?#]+)/);
+  if (folderUrlMatch) return folderUrlMatch[1];
+
+  const queryIdMatch = trimmed.match(/[?&]id=([^&#]+)/i);
+  if (queryIdMatch) return queryIdMatch[1];
+
+  return trimmed.replace(/^GOOGLE_DRIVE_FOLDER_ID=/i, '').replace(/^ID=/i, '').trim();
 }
 
 function mimeLabel(mimeType) {
