@@ -28,7 +28,7 @@ async function api(path, options = {}) {
 
   if (!response.ok) {
     setStatus('오류');
-    throw new Error(data.error || 'Request failed.');
+    throw new Error(data.error || data.message || response.statusText || '요청에 실패했습니다.');
   }
 
   setStatus('저장됨');
@@ -66,6 +66,9 @@ function renderSetup() {
   }
   if (!state.data.googleReady) {
     messages.push('Google 연결을 완료하면 캘린더 일정과 드라이브 악보를 불러옵니다.');
+  }
+  for (const error of state.data.googleErrors || []) {
+    messages.push(error);
   }
 
   $('#connectGoogle').hidden = state.data.googleReady || !state.data.setup.hasOAuthConfig;
@@ -488,4 +491,3 @@ init().catch((error) => {
     );
   }
 });
-

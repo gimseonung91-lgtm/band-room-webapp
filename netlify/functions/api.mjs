@@ -49,9 +49,9 @@ async function handleApi(request, url, pathname) {
     const month = Number(url.searchParams.get('month') || now.getMonth() + 1);
     const state = await readState();
     const googleReady = await hasGoogleToken();
-    const [events, scores] = googleReady
-      ? await Promise.all([listCalendarEvents(year, month), listDriveScores()])
-      : [[], []];
+    const googleData = googleReady
+      ? await loadGoogleData(year, month)
+      : { events: [], scores: [], errors: [] };
 
     return json({
       appTitle: 'Band Room',
@@ -63,8 +63,9 @@ async function handleApi(request, url, pathname) {
         driveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID || ''
       },
       members: MEMBERS,
-      month: buildMonth(year, month, state, events),
-      scores,
+      month: buildMonth(year, month, state, googleData.events),
+      scores: googleData.scores,
+      googleErrors: googleData.errors,
       songs: state.songs,
       notices: state.notices
     });
@@ -74,7 +75,7 @@ async function handleApi(request, url, pathname) {
     const year = Number(url.searchParams.get('year'));
     const month = Number(url.searchParams.get('month'));
     const state = await readState();
-    const events = await listCalendarEvents(year, month);
+    const events = await listCalendarEvents(year, month).catch(() => []);
     return json(buildMonth(year, month, state, events));
   }
 
@@ -209,6 +210,26 @@ async function googleApi(url, options = {}) {
   const data = await response.json();
   if (!response.ok) throw new Error(data.error?.message || 'Google API request failed.');
   return data;
+}
+
+async function loadGoogleData(year, month) {
+  const [eventsResult, scoresResult] = await Promise.allSettled([
+    listCalendarEvents(year, month),
+    listDriveScores()
+  ]);
+
+  return {
+    events: eventsResult.status === 'fulfilled' ? eventsResult.value : [],
+    scores: scoresResult.status === 'fulfilled' ? scoresResult.value : [],
+    errors: [
+      eventsResult.status === 'rejected' ? `캘린더 오류: ${errorMessage(eventsResult.reason)}` : '',
+      scoresResult.status === 'rejected' ? `드라이브 오류: ${errorMessage(scoresResult.reason)}` : ''
+    ].filter(Boolean)
+  };
+}
+
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 async function getAccessToken() {
