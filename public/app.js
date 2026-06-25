@@ -65,7 +65,7 @@ function renderSetup() {
     messages.push('GOOGLE_DRIVE_FOLDER_ID 환경 변수에 악보 폴더 ID를 넣어주세요.');
   }
   if (!state.data.googleReady) {
-    messages.push('Google 연결을 완료하면 캘린더 일정과 드라이브 악보를 불러옵니다.');
+    messages.push('Google 연결을 완료하면 드라이브 악보를 불러옵니다.');
   }
   for (const error of state.data.googleErrors || []) {
     messages.push(error);
@@ -88,11 +88,6 @@ function renderCalendar() {
 
     const selected = cell.date === state.selectedDate ? 'selected' : '';
     const today = cell.isToday ? 'today' : '';
-    const events = cell.events
-      .slice(0, 2)
-      .map((event) => `<span class="event-chip">${escapeHtml(event.title)}</span>`)
-      .join('');
-
     return `
       <button
         class="day-cell ${cell.capacityClass} ${selected} ${today}"
@@ -102,7 +97,6 @@ function renderCalendar() {
           <span class="day-number">${cell.day}</span>
           <span class="attendance-count">${cell.availableCount}/${state.data.members.length}</span>
         </span>
-        ${events}
       </button>
     `;
   }).join('');
@@ -134,23 +128,6 @@ function renderDayPanel() {
   $('#dayPanel').innerHTML = `
     <h3 class="date-title">${day.date} · ${day.availableCount}/${state.data.members.length}명 가능</h3>
     <div class="member-list">${members}</div>
-    <form class="event-form" id="eventForm">
-      <label>
-        <span>캘린더 일정명</span>
-        <input id="eventTitle" value="밴드 합주">
-      </label>
-      <div class="time-row">
-        <label>
-          <span>시작</span>
-          <input id="startTime" type="time" value="19:30">
-        </label>
-        <label>
-          <span>종료</span>
-          <input id="endTime" type="time" value="21:30">
-        </label>
-      </div>
-      <button class="button primary" type="submit">구글 캘린더에 등록</button>
-    </form>
   `;
 }
 
@@ -310,11 +287,6 @@ async function handleSubmit(event) {
     return;
   }
 
-  if (event.target.id === 'eventForm') {
-    await createEvent();
-    return;
-  }
-
   if (event.target.id === 'songForm') {
     const title = $('#newSongTitle').value.trim();
     if (!title) return;
@@ -350,22 +322,6 @@ async function submitAccessCode() {
     $('#accessDialog').close();
     await loadBootstrap();
   }
-}
-
-async function createEvent() {
-  const day = selectedDay();
-  if (!day) return;
-
-  await api('/api/events', {
-    method: 'POST',
-    body: JSON.stringify({
-      date: day.date,
-      title: $('#eventTitle').value,
-      startTime: $('#startTime').value,
-      endTime: $('#endTime').value
-    })
-  });
-  await refreshMonth();
 }
 
 async function toggleMember(button) {

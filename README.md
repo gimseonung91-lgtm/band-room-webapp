@@ -2,13 +2,12 @@
 
 Band Room is a regular web app for a seven-member band. It is not Google Apps Script.
 
-The local development server uses `server.mjs`. The Netlify deployment uses Netlify Functions and Netlify Blobs for Google OAuth, Calendar API calls, Drive API calls, and shared rehearsal state.
+The local development server uses `server.mjs`. The Netlify deployment uses Netlify Functions and Netlify Blobs for Google OAuth, Drive API calls, and shared rehearsal state.
 
 ## What It Includes
 
 - Monthly rehearsal calendar with per-member availability.
 - Deep blue date cells when all seven members are available, with lighter levels for fewer members.
-- Google Calendar event creation.
 - Google Drive score folder listing for PDF, image, Google Docs, and Google Slides files.
 - Built-in score preview with a full-screen reader mode for phones and tablets.
 - Shared song progress and notice checkboard.
@@ -18,7 +17,6 @@ The local development server uses `server.mjs`. The Netlify deployment uses Netl
 
 1. Create or open a Google Cloud project.
 2. Enable these APIs:
-   - Google Calendar API
    - Google Drive API
 3. Configure OAuth consent.
 4. Create an OAuth Client ID:
@@ -33,11 +31,10 @@ BAND_ACCESS_CODE=change-this-code
 GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:3000/oauth2callback
-GOOGLE_CALENDAR_ID=primary
 GOOGLE_DRIVE_FOLDER_ID=your-drive-folder-id
 ```
 
-Use `primary` for your main calendar, or paste a shared band calendar ID. The Drive folder ID is the last part of the folder URL.
+The Drive folder ID is the last part of the folder URL.
 
 ## Local Run
 
@@ -45,7 +42,7 @@ Use `primary` for your main calendar, or paste a shared band calendar ID. The Dr
 npm start
 ```
 
-Open `http://localhost:3000`, enter the band access code, then press `Google 연결` once to connect the Google account that owns the calendar and score folder.
+Open `http://localhost:3000`, enter the band access code, then press `Google 연결` once to connect the Google account that owns the score folder.
 
 ## Netlify Deploy
 
@@ -61,7 +58,6 @@ Set these environment variables in Netlify:
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REDIRECT_URI`
-- `GOOGLE_CALENDAR_ID`
 - `GOOGLE_DRIVE_FOLDER_ID`
 
 For production, set `GOOGLE_REDIRECT_URI` to the deployed callback URL and add the same URL to the OAuth Client ID:
@@ -71,4 +67,3 @@ https://your-site-name.netlify.app/oauth2callback
 ```
 
 After deployment, open the Netlify site and press `Google 연결` once. Netlify Blobs will store the shared app state and the Google refresh token for future requests.
-

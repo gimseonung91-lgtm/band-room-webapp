@@ -49,9 +49,9 @@ async function handleApi(request, url, pathname) {
     const month = Number(url.searchParams.get('month') || now.getMonth() + 1);
     const state = await readState();
     const googleReady = await hasGoogleToken();
-    const googleData = googleReady
-      ? await loadGoogleData(year, month)
-      : { events: [], scores: [], errors: [] };
+    const driveData = googleReady
+      ? await loadDriveData()
+      : { scores: [], errors: [] };
 
     return json({
       appTitle: 'Band Room',
@@ -59,13 +59,12 @@ async function handleApi(request, url, pathname) {
       setup: {
         hasOAuthConfig: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
         hasDriveFolder: Boolean(process.env.GOOGLE_DRIVE_FOLDER_ID),
-        calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
         driveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID || ''
       },
       members: MEMBERS,
-      month: buildMonth(year, month, state, googleData.events),
-      scores: googleData.scores,
-      googleErrors: googleData.errors,
+      month: buildMonth(year, month, state),
+      scores: driveData.scores,
+      googleErrors: driveData.errors,
       songs: state.songs,
       notices: state.notices
     });
@@ -75,8 +74,7 @@ async function handleApi(request, url, pathname) {
     const year = Number(url.searchParams.get('year'));
     const month = Number(url.searchParams.get('month'));
     const state = await readState();
-    const events = await listCalendarEvents(year, month).catch(() => []);
-    return json(buildMonth(year, month, state, events));
+    return json(buildMonth(year, month, state));
   }
 
   if (pathname === '/api/availability' && request.method === 'POST') {
@@ -91,10 +89,6 @@ async function handleApi(request, url, pathname) {
 
     await writeState(state);
     return json(buildDay(body.date, state));
-  }
-
-  if (pathname === '/api/events' && request.method === 'POST') {
-    return json(await createCalendarEvent(await readJson(request)));
   }
 
   if (pathname === '/api/scores' && request.method === 'GET') {
@@ -148,8 +142,6 @@ function redirectToGoogle(request) {
   }
 
   const scopes = [
-    'https://www.googleapis.com/auth/calendar.events',
-    'https://www.googleapis.com/auth/calendar.readonly',
     'https://www.googleapis.com/auth/drive.readonly'
   ];
 
@@ -212,17 +204,14 @@ async function googleApi(url, options = {}) {
   return data;
 }
 
-async function loadGoogleData(year, month) {
-  const [eventsResult, scoresResult] = await Promise.allSettled([
-    listCalendarEvents(year, month),
+async function loadDriveData() {
+  const [scoresResult] = await Promise.allSettled([
     listDriveScores()
   ]);
 
   return {
-    events: eventsResult.status === 'fulfilled' ? eventsResult.value : [],
     scores: scoresResult.status === 'fulfilled' ? scoresResult.value : [],
     errors: [
-      eventsResult.status === 'rejected' ? `캘린더 오류: ${errorMessage(eventsResult.reason)}` : '',
       scoresResult.status === 'rejected' ? `드라이브 오류: ${errorMessage(scoresResult.reason)}` : ''
     ].filter(Boolean)
   };
@@ -253,45 +242,6 @@ async function getAccessToken() {
   };
   await saveToken(nextToken);
   return nextToken.access_token;
-}
-
-async function listCalendarEvents(year, month) {
-  const timeMin = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
-  const timeMax = new Date(Date.UTC(year, month, 1, 0, 0, 0)).toISOString();
-  const params = new URLSearchParams({
-    timeMin,
-    timeMax,
-    singleEvents: 'true',
-    orderBy: 'startTime',
-    maxResults: '120'
-  });
-  const calendarId = encodeURIComponent(process.env.GOOGLE_CALENDAR_ID || 'primary');
-  const data = await googleApi(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?${params}`);
-
-  return (data.items || []).map((event) => ({
-    id: event.id,
-    title: event.summary || '일정',
-    start: event.start?.dateTime || event.start?.date || '',
-    date: event.start?.date || toDateIso(new Date(event.start?.dateTime || Date.now()))
-  }));
-}
-
-async function createCalendarEvent(body) {
-  assertDate(body.date);
-  const summary = String(body.title || '밴드 합주').trim().slice(0, 80);
-  const startTime = /^\d{2}:\d{2}$/.test(body.startTime || '') ? body.startTime : '19:30';
-  const endTime = /^\d{2}:\d{2}$/.test(body.endTime || '') ? body.endTime : '21:30';
-  const calendarId = encodeURIComponent(process.env.GOOGLE_CALENDAR_ID || 'primary');
-
-  return googleApi(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
-    method: 'POST',
-    body: JSON.stringify({
-      summary,
-      description: 'Band Room 웹앱에서 등록한 합주 일정입니다.',
-      start: { dateTime: `${body.date}T${startTime}:00+09:00`, timeZone: 'Asia/Seoul' },
-      end: { dateTime: `${body.date}T${endTime}:00+09:00`, timeZone: 'Asia/Seoul' }
-    })
-  });
 }
 
 async function listDriveScores() {
@@ -332,15 +282,10 @@ async function listDriveScores() {
   }));
 }
 
-function buildMonth(year, month, state, events) {
+function buildMonth(year, month, state) {
   const first = new Date(year, month - 1, 1);
   const lastDay = new Date(year, month, 0).getDate();
   const todayIso = toDateIso(new Date());
-  const eventsByDate = events.reduce((bucket, event) => {
-    bucket[event.date] ||= [];
-    bucket[event.date].push(event);
-    return bucket;
-  }, {});
 
   const cells = [];
   for (let index = 0; index < first.getDay(); index += 1) cells.push({ empty: true });
@@ -352,7 +297,6 @@ function buildMonth(year, month, state, events) {
       date,
       day,
       isToday: date === todayIso,
-      events: eventsByDate[date] || [],
       ...buildDay(date, state)
     });
   }

@@ -19,7 +19,6 @@ const config = {
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/oauth2callback',
-  calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
   driveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID || '',
   members: [
     { id: 'vocal', name: '김 선생님', part: 'Vocal' },
@@ -99,9 +98,7 @@ async function handleApi(req, res, url) {
     const state = await readState();
     const googleReady = await hasGoogleToken();
 
-    const [events, scores] = googleReady
-      ? await Promise.all([listCalendarEvents(year, month), listDriveScores()])
-      : [[], []];
+    const scores = googleReady ? await listDriveScores() : [];
 
     return sendJson(res, 200, {
       appTitle: 'Band Room',
@@ -109,11 +106,10 @@ async function handleApi(req, res, url) {
       setup: {
         hasOAuthConfig: Boolean(config.googleClientId && config.googleClientSecret),
         hasDriveFolder: Boolean(config.driveFolderId),
-        calendarId: config.calendarId,
         driveFolderId: config.driveFolderId
       },
       members: config.members,
-      month: buildMonth(year, month, state, events),
+      month: buildMonth(year, month, state),
       scores,
       songs: state.songs,
       notices: state.notices
@@ -124,8 +120,7 @@ async function handleApi(req, res, url) {
     const year = Number(url.searchParams.get('year'));
     const month = Number(url.searchParams.get('month'));
     const state = await readState();
-    const events = await listCalendarEvents(year, month);
-    return sendJson(res, 200, buildMonth(year, month, state, events));
+    return sendJson(res, 200, buildMonth(year, month, state));
   }
 
   if (url.pathname === '/api/availability' && req.method === 'POST') {
@@ -143,12 +138,6 @@ async function handleApi(req, res, url) {
 
     await writeState(state);
     return sendJson(res, 200, buildDay(body.date, state));
-  }
-
-  if (url.pathname === '/api/events' && req.method === 'POST') {
-    const body = await readJson(req);
-    const event = await createCalendarEvent(body);
-    return sendJson(res, 200, event);
   }
 
   if (url.pathname === '/api/scores' && req.method === 'GET') {
@@ -202,8 +191,6 @@ function redirectToGoogle(res) {
   }
 
   const scopes = [
-    'https://www.googleapis.com/auth/calendar.events',
-    'https://www.googleapis.com/auth/calendar.readonly',
     'https://www.googleapis.com/auth/drive.readonly'
   ];
 
@@ -297,45 +284,6 @@ async function googleApi(url, options = {}) {
   return data;
 }
 
-async function listCalendarEvents(year, month) {
-  const timeMin = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)).toISOString();
-  const timeMax = new Date(Date.UTC(year, month, 1, 0, 0, 0)).toISOString();
-  const params = new URLSearchParams({
-    timeMin,
-    timeMax,
-    singleEvents: 'true',
-    orderBy: 'startTime',
-    maxResults: '120'
-  });
-  const calendarId = encodeURIComponent(config.calendarId);
-  const data = await googleApi(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?${params}`);
-
-  return (data.items || []).map((event) => ({
-    id: event.id,
-    title: event.summary || '일정',
-    start: event.start?.dateTime || event.start?.date || '',
-    date: event.start?.date || toDateIso(new Date(event.start?.dateTime || Date.now()))
-  }));
-}
-
-async function createCalendarEvent(body) {
-  assertDate(body.date);
-  const summary = String(body.title || '밴드 합주').trim().slice(0, 80);
-  const startTime = /^\d{2}:\d{2}$/.test(body.startTime || '') ? body.startTime : '19:30';
-  const endTime = /^\d{2}:\d{2}$/.test(body.endTime || '') ? body.endTime : '21:30';
-  const calendarId = encodeURIComponent(config.calendarId);
-
-  return googleApi(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
-    method: 'POST',
-    body: JSON.stringify({
-      summary,
-      description: 'Band Room 웹앱에서 등록한 합주 일정입니다.',
-      start: { dateTime: `${body.date}T${startTime}:00+09:00`, timeZone: 'Asia/Seoul' },
-      end: { dateTime: `${body.date}T${endTime}:00+09:00`, timeZone: 'Asia/Seoul' }
-    })
-  });
-}
-
 async function listDriveScores() {
   const folderId = normalizeDriveFolderId(config.driveFolderId);
   if (!folderId) return [];
@@ -374,15 +322,10 @@ async function listDriveScores() {
   }));
 }
 
-function buildMonth(year, month, state, events) {
+function buildMonth(year, month, state) {
   const first = new Date(year, month - 1, 1);
   const lastDay = new Date(year, month, 0).getDate();
   const todayIso = toDateIso(new Date());
-  const eventsByDate = events.reduce((bucket, event) => {
-    bucket[event.date] ||= [];
-    bucket[event.date].push(event);
-    return bucket;
-  }, {});
 
   const cells = [];
   for (let index = 0; index < first.getDay(); index += 1) cells.push({ empty: true });
@@ -395,7 +338,6 @@ function buildMonth(year, month, state, events) {
       date,
       day,
       isToday: date === todayIso,
-      events: eventsByDate[date] || [],
       ...dayState
     });
   }

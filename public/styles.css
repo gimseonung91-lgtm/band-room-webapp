@@ -387,19 +387,6 @@ main {
   font-weight: 900;
 }
 
-.event-chip {
-  display: block;
-  overflow: hidden;
-  margin-top: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--surface-secondary) 54%, transparent);
-  font-size: 12px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .day-panel {
   position: sticky;
   top: 130px;
@@ -462,16 +449,9 @@ main {
   font-weight: 900;
 }
 
-.event-form,
 .inline-form {
   display: grid;
   gap: var(--space-3);
-}
-
-.event-form {
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-default);
 }
 
 label {
@@ -496,12 +476,6 @@ textarea {
 textarea {
   min-height: 74px;
   resize: vertical;
-}
-
-.time-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
 }
 
 .file-list {
@@ -816,10 +790,6 @@ body.reader-focus .score-frame {
 
   .attendance-count {
     font-size: 11px;
-  }
-
-  .event-chip {
-    display: none;
   }
 
   .weekday {
