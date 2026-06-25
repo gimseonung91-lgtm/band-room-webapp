@@ -1,0 +1,23 @@
+[build]
+  publish = "public"
+  command = "npm run check"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/auth/google"
+  to = "/.netlify/functions/api/auth/google"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/oauth2callback"
+  to = "/.netlify/functions/api/oauth2callback"
+  status = 200
+  force = true
+

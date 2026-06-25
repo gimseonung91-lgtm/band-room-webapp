@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs"
+    "build": "npm run check",
+    "check": "node --check server.mjs && node --check netlify/functions/api.mjs"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^10.0.10"
   }
 }
-
