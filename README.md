@@ -45,11 +45,25 @@ Open `http://localhost:3000`, enter the band access code, then press `Google 연
 
 ## Deploy Notes
 
-For production, set the same environment variables on your host and add the deployed callback URL to the OAuth Client ID:
+This app needs a Node host because Google OAuth, token refresh, Calendar writes, and Drive reads are handled by `server.mjs`.
+
+### Render
+
+The repository includes `render.yaml`, so Render can create the web service from the GitHub repository.
+
+Set these environment variables in Render:
+
+- `BAND_ACCESS_CODE`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+- `GOOGLE_CALENDAR_ID`
+- `GOOGLE_DRIVE_FOLDER_ID`
+
+For production, set `GOOGLE_REDIRECT_URI` to the deployed callback URL and add the same URL to the OAuth Client ID:
 
 ```text
 https://your-domain.example/oauth2callback
 ```
 
 The `data/` folder stores the Google token and app state. On a managed host, mount persistent storage or replace the file storage with a database.
-
