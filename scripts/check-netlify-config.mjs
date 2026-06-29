@@ -1,7 +1,9 @@
 import { readFile } from 'node:fs/promises';
 
 const configUrl = new URL('../netlify.toml', import.meta.url);
+const indexUrl = new URL('../public/index.html', import.meta.url);
 const config = await readFile(configUrl, 'utf8');
+const indexHtml = await readFile(indexUrl, 'utf8');
 const omitKeys = config.match(/SECRETS_SCAN_OMIT_KEYS\s*=\s*"([^"]*)"/)?.[1]
   .split(',')
   .map((key) => key.trim())
@@ -16,6 +18,12 @@ const missingOmitKeys = expectedOmitKeys.filter((key) => !omitKeys.includes(key)
 
 if (missingOmitKeys.length > 0) {
   console.error(`Netlify secret-scan omit keys are missing: ${missingOmitKeys.join(', ')}`);
+  process.exit(1);
+}
+
+const accessCode = process.env.BAND_ACCESS_CODE || '';
+if (accessCode && indexHtml.includes(accessCode)) {
+  console.error('BAND_ACCESS_CODE must not appear in public/index.html.');
   process.exit(1);
 }
 
