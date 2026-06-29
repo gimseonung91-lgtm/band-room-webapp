@@ -4,7 +4,7 @@
   functions = "netlify/functions"
 
 [build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "GOOGLE_CALENDAR_ID"
+  SECRETS_SCAN_OMIT_KEYS = "GOOGLE_CALENDAR_ID,GOOGLE_CLIENT_ID,GOOGLE_DRIVE_FOLDER_ID,GOOGLE_REDIRECT_URI"
 
 [[headers]]
   for = "/*"
