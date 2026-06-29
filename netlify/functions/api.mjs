@@ -251,18 +251,12 @@ async function listDriveScores() {
   const q = [
     `'${folderId.replaceAll("'", "\\'")}' in parents`,
     'trashed = false',
-    '(',
-    "mimeType = 'application/pdf'",
-    "or mimeType = 'image/jpeg'",
-    "or mimeType = 'image/png'",
-    "or mimeType = 'application/vnd.google-apps.document'",
-    "or mimeType = 'application/vnd.google-apps.presentation'",
-    ')'
+    "mimeType != 'application/vnd.google-apps.folder'"
   ].join(' ');
 
   const params = new URLSearchParams({
     q,
-    pageSize: '100',
+    pageSize: '200',
     orderBy: 'name',
     supportsAllDrives: 'true',
     includeItemsFromAllDrives: 'true',
@@ -458,6 +452,9 @@ function previewUrl(file) {
   if (file.mimeType === 'application/vnd.google-apps.presentation') {
     return `https://docs.google.com/presentation/d/${file.id}/preview`;
   }
+  if (file.mimeType === 'application/vnd.google-apps.spreadsheet') {
+    return `https://docs.google.com/spreadsheets/d/${file.id}/preview`;
+  }
   return `https://drive.google.com/file/d/${file.id}/preview`;
 }
 
@@ -480,6 +477,7 @@ function mimeLabel(mimeType) {
     'image/jpeg': 'JPG',
     'image/png': 'PNG',
     'application/vnd.google-apps.document': 'DOC',
-    'application/vnd.google-apps.presentation': 'SLIDES'
+    'application/vnd.google-apps.presentation': 'SLIDES',
+    'application/vnd.google-apps.spreadsheet': 'SHEET'
   }[mimeType] || 'FILE';
 }

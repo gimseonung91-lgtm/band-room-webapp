@@ -1,0 +1,32 @@
+Band Room C002 Drive edge-state evidence
+
+Scope:
+- The score list should not fail silently.
+- It should show a clear state for Google not connected, missing Drive folder, Drive API errors, and empty folders.
+- It should not show stale Google Calendar entries.
+
+Implemented behavior:
+- public/app.js keeps state.scoreError for explicit refresh errors.
+- renderScores checks, in order:
+  - state.scoreError
+  - state.data.googleErrors messages containing Drive or 드라이브
+  - !state.data.googleReady
+  - !state.data.setup.hasDriveFolder
+  - empty score list
+  - populated score list
+- refreshScores catches /api/scores errors and renders the error in the score list.
+- bootstrap load resets stale scoreError.
+
+Server behavior:
+- netlify/functions/api.mjs and server.mjs use loadDriveData() so a Drive list failure is returned in googleErrors instead of breaking bootstrap.
+- Drive query now loads all non-folder files in the configured folder instead of only PDF/JPG/PNG/Docs/Slides.
+- Google Sheets preview and SHEET label are supported.
+
+Local edge observation:
+- Local env is not Google-connected and has no GOOGLE_DRIVE_FOLDER_ID.
+- Browser score list shows: Google 연결을 완료하면 악보 폴더의 파일을 불러옵니다.
+- /api/scores returns [] when no Drive folder ID is configured locally.
+
+Residual risk:
+- A real connected Google account and real Drive folder were not available in this local run, so live Drive API listing with the user's production token was not executed here.
+- The code paths for connected Drive are covered by source review and by the broadened Drive API query, but the final production check should be done after redeploying with the existing Netlify Google variables.

@@ -1,0 +1,47 @@
+Band Room C001 HTTP and browser evidence
+
+Scope:
+- Remove Google Calendar residue from the visible/app data path.
+- Keep attendance grid and Google Drive score-loading state.
+- Confirm the app shell loads fresh assets.
+
+HTTP/API evidence from local server http://localhost:3010:
+- appTitle: Band Room
+- googleReady: false
+- setup.hasOAuthConfig: false in local env
+- setup.hasDriveFolder: false in local env
+- setup has no calendarId key
+- month has 30 real day cells for 2026-06
+- first real day cell keys:
+  - empty
+  - date
+  - day
+  - isToday
+  - availability
+  - availableCount
+  - capacityClass
+- first real day cell has no events key
+- scores: 0
+- googleErrors: []
+
+Static asset evidence:
+- / returned Cache-Control: no-cache, no-store, must-revalidate
+- public/index.html includes /app.js?v=20260626-drive-cache
+- public/index.html includes /styles.css?v=20260626-drive-cache
+- visible Korean label is 참석표, not 일정
+- static HTML does not contain 캘린더
+
+Browser evidence from in-app browser at 390x844:
+- title: Band Room
+- active tab: 참석표
+- tabs: 참석표, 악보, 체크보드
+- month label: 2026년 6월
+- score list text: Google 연결을 완료하면 악보 폴더의 파일을 불러옵니다.
+- hasEventForm: false
+- hasEventChips: false
+- day cells did not contain stale imported calendar event titles
+- console error logs: []
+
+Visual artifacts:
+- .omo/ulw-loop/evidence/mobile-attendance.png
+- .omo/ulw-loop/evidence/tablet-attendance.png
