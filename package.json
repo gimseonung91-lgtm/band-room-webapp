@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.mjs",
     "build": "npm run check",
-    "check": "node --check server.mjs && node --check netlify/functions/api.mjs"
+    "check": "node scripts/check-netlify-config.mjs && node --check server.mjs && node --check netlify/functions/api.mjs"
   },
   "engines": {
     "node": ">=18"
